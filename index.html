@@ -118,6 +118,17 @@ footer{background:#03070c;color:#77879a;text-align:center;padding:24px;font-size
 .shopee-sub{max-width:820px;margin:0 auto!important}
 @media(max-width:760px){.brand-logo{transform:scale(.9)}.shopee-title{font-size:28px!important}}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+  const SUPABASE_URL = "https://lnphuqdmsypunhnncbja.supabase.co";
+  const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_AcXySBXIA6x8HDSex9l3jQ_Dowjr71A";
+
+  const supabase = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_PUBLISHABLE_KEY
+  );
+</script>  
 </head>
 <body>
 <header>
