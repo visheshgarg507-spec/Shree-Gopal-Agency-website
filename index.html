@@ -416,5 +416,263 @@ renderProducts();
   filter();
 })();
 </script>
+<script>
+(async function loadSupabaseProducts() {
+  try {
+    const { data, error } = await supabase
+      .from("products")
+      .select("*")
+      .order("name", { ascending: true });
+
+    if (error) {
+      console.error("Supabase products error:", error);
+      return;
+    }
+
+    const catalogueGrid =
+      document.querySelector(".catalogue-grid") ||
+      document.querySelector(".product-grid");
+
+    if (!catalogueGrid) {
+      console.error("Catalogue grid not found.");
+      return;
+    }
+
+    const search =
+      document.getElementById("search") ||
+      document.getElementById("productSearch");
+
+    const brand =
+      document.getElementById("brand") ||
+      document.getElementById("brandFilter");
+
+    const category =
+      document.getElementById("category") ||
+      document.getElementById("categoryFilter");
+
+    const clearFilters =
+      document.getElementById("clearFilters");
+
+    const resultCount =
+      document.getElementById("resultCount") ||
+      document.getElementById("productCount");
+
+    const noResults =
+      document.getElementById("noResults") ||
+      document.getElementById("emptyState");
+
+    const products = data || [];
+
+    function escapeHTML(value) {
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function whatsappLink(product) {
+      const message = encodeURIComponent(
+        `Hello Shree Gopal Agency, I want to enquire about:\n\n` +
+        `Product: ${product.name || ""}\n` +
+        `Brand: ${product.brand || ""}\n` +
+        `Part No.: ${product.part_number || ""}\n` +
+        `Vehicle/Model: ${product.vehicle_models || ""}`
+      );
+
+      return `https://wa.me/919424803302?text=${message}`;
+    }
+
+    function renderProducts() {
+      const query = (search?.value || "").trim().toLowerCase();
+      const selectedBrand = brand?.value || "all";
+      const selectedCategory = category?.value || "all";
+
+      const filtered = products.filter(product => {
+        const searchable = [
+          product.name,
+          product.brand,
+          product.category,
+          product.part_number,
+          product.vehicle_models,
+          product.description
+        ]
+          .join(" ")
+          .toLowerCase();
+
+        const matchesSearch =
+          !query || searchable.includes(query);
+
+        const matchesBrand =
+          selectedBrand === "all" ||
+          selectedBrand === "" ||
+          product.brand === selectedBrand;
+
+        const matchesCategory =
+          selectedCategory === "all" ||
+          selectedCategory === "" ||
+          product.category === selectedCategory;
+
+        return matchesSearch && matchesBrand && matchesCategory;
+      });
+
+      catalogueGrid.innerHTML = filtered.map(product => `
+        <article
+          class="catalogue-card"
+          data-search="${escapeHTML([
+            product.name,
+            product.brand,
+            product.category,
+            product.part_number,
+            product.vehicle_models
+          ].join(" "))}"
+          data-brand="${escapeHTML(product.brand || "")}"
+          data-category="${escapeHTML(product.category || "")}"
+        >
+
+          <div class="catalogue-top">
+            <div class="catalogue-icon">
+              ${escapeHTML((product.brand || "P").substring(0, 2).toUpperCase())}
+            </div>
+
+            <div class="availability">
+              ${escapeHTML(product.availability || "Available")}
+            </div>
+          </div>
+
+          ${
+            product.image_url
+              ? `
+                <img
+                  src="${escapeHTML(product.image_url)}"
+                  alt="${escapeHTML(product.name || "Product")}"
+                  style="
+                    width:100%;
+                    height:190px;
+                    object-fit:contain;
+                    border-radius:12px;
+                    margin-top:16px;
+                    background:#fff;
+                  "
+                >
+              `
+              : ""
+          }
+
+          <h3>
+            ${escapeHTML(product.name || "Unnamed Product")}
+          </h3>
+
+          <p>
+            ${escapeHTML(product.description || "Genuine automotive spare part.")}
+          </p>
+
+          <div class="catalogue-meta">
+            <span>${escapeHTML(product.brand || "Other")}</span>
+            <span>${escapeHTML(product.category || "Other")}</span>
+
+            ${
+              product.part_number
+                ? `<span>Part No. ${escapeHTML(product.part_number)}</span>`
+                : ""
+            }
+
+            ${
+              product.vehicle_models
+                ? `<span>${escapeHTML(product.vehicle_models)}</span>`
+                : ""
+            }
+          </div>
+
+          <a
+            class="catalogue-btn"
+            href="${whatsappLink(product)}"
+            target="_blank"
+            rel="noopener"
+          >
+            WhatsApp Enquiry →
+          </a>
+
+        </article>
+      `).join("");
+
+      if (resultCount) {
+        resultCount.textContent = filtered.length;
+      }
+
+      if (noResults) {
+        noResults.hidden = filtered.length !== 0;
+      }
+    }
+
+    // Populate brand filter
+    if (brand) {
+      const brands = [
+        ...new Set(
+          products
+            .map(p => p.brand)
+            .filter(Boolean)
+        )
+      ].sort();
+
+      brand.innerHTML =
+        `<option value="all">All Brands</option>` +
+        brands
+          .map(
+            b =>
+              `<option value="${escapeHTML(b)}">${escapeHTML(b)}</option>`
+          )
+          .join("");
+    }
+
+    // Populate category filter
+    if (category) {
+      const categories = [
+        ...new Set(
+          products
+            .map(p => p.category)
+            .filter(Boolean)
+        )
+      ].sort();
+
+      category.innerHTML =
+        `<option value="all">All Categories</option>` +
+        categories
+          .map(
+            c =>
+              `<option value="${escapeHTML(c)}">${escapeHTML(c)}</option>`
+          )
+          .join("");
+    }
+
+    if (search) {
+      search.addEventListener("input", renderProducts);
+    }
+
+    if (brand) {
+      brand.addEventListener("change", renderProducts);
+    }
+
+    if (category) {
+      category.addEventListener("change", renderProducts);
+    }
+
+    if (clearFilters) {
+      clearFilters.addEventListener("click", function () {
+        if (search) search.value = "";
+        if (brand) brand.value = "all";
+        if (category) category.value = "all";
+        renderProducts();
+      });
+    }
+
+    renderProducts();
+
+  } catch (err) {
+    console.error("Website/Supabase error:", err);
+  }
+})();
+</script>  
 </body>
 </html>
